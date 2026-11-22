@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WebTV">
+<title>WebTV · 免费网络电视</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121923; --panel2:#1a2432; --line:#243044;
+    --text:#e8edf2; --dim:#8b98a9; --acc:#4f9cf9; --danger:#e5534b;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; color-scheme:dark; }
+  body{
+    background:var(--bg); color:var(--text); font-size:16px;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI","Microsoft YaHei",sans-serif;
+    padding-bottom:calc(70px + env(safe-area-inset-bottom));
+  }
+  a{ color:var(--acc); }
+
+  /* 顶栏 */
+  .appbar{
+    position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:10px;
+    padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+    background:rgba(11,15,20,.92); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .appbar .dot{ width:26px; height:26px; border-radius:8px; background:linear-gradient(135deg,#4f9cf9,#7c5cff);
+    display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .appbar h1{ font-size:18px; margin:0; flex:1; letter-spacing:.5px; }
+  .appbar .tag{ font-size:12px; color:var(--dim); border:1px solid var(--line); padding:3px 8px; border-radius:999px; }
+
+  .view{ display:none; padding:12px 14px; }
+  .view.active{ display:block; }
+  .sec-title{ font-size:14px; color:var(--dim); margin:14px 0 8px; font-weight:600; }
+
+  /* 搜索 */
+  .searchbar{ margin:4px 0 10px; }
+  input[type=search], input[type=url], input[type=text], textarea{
+    width:100%; font-size:16px; padding:11px 13px; border-radius:12px;
+    border:1px solid var(--line); background:var(--panel); color:var(--text); outline:none;
+  }
+  input:focus, textarea:focus{ border-color:var(--acc); }
+  textarea{ resize:vertical; font-family:ui-monospace,monospace; font-size:14px; }
+
+  /* 频道列表 */
+  .group-h{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 4px 8px; font-size:14px; color:var(--dim); font-weight:600;
+    border-bottom:1px solid var(--line); cursor:pointer;
+  }
+  .group-h .cnt{ font-size:12px; color:var(--dim); }
+  .row{
+    display:flex; align-items:center; gap:10px; padding:11px 4px;
+    border-bottom:1px solid rgba(36,48,68,.5); cursor:pointer;
+  }
+  .row:active{ background:var(--panel); }
+  .row .logo{ width:34px; height:34px; border-radius:8px; object-fit:contain; background:#fff; flex:none; }
+  .row .grow{ flex:1; min-width:0; }
+  .row .rname{ font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .rsub{ font-size:12px; color:var(--dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .star{ background:none; border:none; font-size:22px; color:var(--dim); padding:6px 8px; flex:none; }
+  .star.on{ color:#f5b93d; }
+  .empty{ color:var(--dim); text-align:center; padding:40px 0; font-size:14px; }
+  .loading{ color:var(--dim); text-align:center; padding:30px 0; font-size:14px; }
+
+  /* 卡片/按钮 */
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:12px; }
+  .btn{
+    display:inline-block; width:100%; margin-top:8px; padding:11px 14px; font-size:15px;
+    border-radius:12px; border:1px solid var(--line); background:var(--panel2); color:var(--text); cursor:pointer;
+  }
+  .btn.primary{ background:var(--acc); border-color:var(--acc); color:#fff; font-weight:600; }
+  .btn.danger{ color:var(--danger); border-color:rgba(229,83,75,.4); background:rgba(229,83,75,.08); }
+  .btn:active{ opacity:.8; }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{
+    padding:8px 14px; border-radius:999px; border:1px solid var(--line);
+    background:var(--panel2); color:var(--text); font-size:14px; cursor:pointer;
+  }
+  .chip:active{ background:var(--acc); }
+  .hint{ color:var(--dim); font-size:13px; line-height:1.6; margin:8px 0 0; }
+  .srcrow{ display:flex; align-items:center; gap:8px; padding:9px 2px; border-bottom:1px solid rgba(36,48,68,.5); }
+  .srcrow .grow{ flex:1; min-width:0; }
+  .srcrow .rname{ font-size:15px; }
+  .srcrow .rsub{ font-size:12px; color:var(--dim); }
+  .del{ background:none; border:1px solid rgba(229,83,75,.4); color:var(--danger); border-radius:8px; padding:4px 10px; font-size:13px; }
+
+  /* 底部 Tab */
+  #tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex;
+    background:rgba(11,15,20,.95); backdrop-filter:blur(12px); border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .tab{
+    flex:1; background:none; border:none; color:var(--dim); font-size:11px;
+    padding:8px 0 9px; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer;
+  }
+  .tab .ti{ font-size:20px; }
+  .tab.active{ color:var(--acc); }
+
+  /* 播放器 */
+  #player{
+    position:fixed; inset:0; z-index:50; background:var(--bg);
+    display:flex; flex-direction:column; overflow-y:auto;
+  }
+  #player[hidden]{ display:none; }
+  .pbar{
+    display:flex; align-items:center; gap:8px;
+    padding:calc(10px + env(safe-area-inset-top)) 12px 10px;
+    border-bottom:1px solid var(--line); background:rgba(11,15,20,.92);
+    position:sticky; top:0; z-index:5;
+  }
+  .pbtn{ background:none; border:none; color:var(--text); font-size:16px; padding:8px 10px; cursor:pointer; flex:none; }
+  .ptitle{ flex:1; font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .vwrap{ background:#000; line-height:0; }
+  video{ width:100%; aspect-ratio:16/9; background:#000; }
+  .status{ padding:10px 14px; font-size:14px; color:var(--dim); }
+  .status.err{ color:var(--danger); }
+  .pactions{ display:flex; gap:10px; padding:4px 14px 10px; }
+  .abtn{
+    flex:1; padding:11px 0; font-size:15px; border-radius:12px;
+    border:1px solid var(--line); background:var(--panel2); color:var(--text); cursor:pointer;
+  }
+  .abtn:active{ background:var(--acc); }
+  #relList .row{ padding-left:8px; padding-right:8px; border-radius:10px; }
+
+  /* Toast */
+  #toast{
+    position:fixed; left:50%; bottom:calc(90px + env(safe-area-inset-bottom));
+    transform:translateX(-50%); z-index:99; max-width:85vw;
+    background:#2b3648; color:#fff; font-size:14px; padding:10px 16px;
+    border-radius:12px; box-shadow:0 6px 24px rgba(0,0,0,.4);
+  }
+  #toast[hidden]{ display:none; }
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="dot">▶</div>
+  <h1>WebTV</h1>
+  <span class="tag">免费网络电视</span>
+</header>
+
+<main id="main">
+  <!-- 频道 -->
+  <section id="view-ch" class="view active">
+    <div class="searchbar"><input id="search" type="search" placeholder="搜索频道 / 影片名称"></div>
+    <div id="chLoading" class="loading" hidden>正在加载频道列表…</div>
+    <div id="chList"></div>
+  </section>
+
+  <!-- 收藏 -->
+  <section id="view-fav" class="view">
+    <div class="sec-title">我的收藏</div>
+    <div id="favList"></div>
+  </section>
+
+  <!-- 历史 -->
+  <section id="view-hist" class="view">
+    <div class="sec-title">观看历史</div>
+    <div id="histList"></div>
+  </section>
+
+  <!-- 设置 -->
+  <section id="view-set" class="view">
+    <div class="card">
+      <div class="sec-title">添加订阅（M3U / JSON 播放列表）</div>
+      <input id="subName" type="text" placeholder="名称（可选）">
+      <input id="subUrl" type="url" placeholder="播放列表地址，例如 https://…/list.m3u">
+      <button id="addSubBtn" class="btn primary">添加订阅</button>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">一键添加公开频道表（iptv-org 开源项目）</div>
+      <div class="chips" id="iptvChips"></div>
+      <p class="hint">来源：<a href="https://github.com/iptv-org/iptv" target="_blank" rel="noopener">iptv-org/iptv</a>（GitHub 上公开收集的免费频道）。部分源可能失效或有地区限制，播不了就换个频道。</p>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">公版免费电影（archive.org）</div>
+      <button id="addArchiveBtn" class="btn">添加公版电影库（约 100 部，可在线播放）</button>
+      <p class="hint">来自 Internet Archive 的公有领域影片，全部合法免费。</p>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">粘贴导入播放列表</div>
+      <textarea id="pasteBox" rows="4" placeholder="粘贴 M3U 或 JSON 播放列表的完整内容"></textarea>
+      <button id="addPasteBtn" class="btn">解析并添加</button>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">直接播放直链</div>
+      <input id="directUrl" type="url" placeholder="粘贴 .m3u8 / .mp4 视频直链">
+      <button id="directBtn" class="btn">播放</button>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">我的源（<span id="srcCount">0</span>）</div>
+      <div id="srcList"></div>
+      <button id="clearBtn" class="btn danger">清空收藏与历史</button>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">帮助</div>
+      <p class="hint">
+        · iPhone 上用 Safari 打开本页 → 点「分享」→「添加到主屏幕」，即可像 App 一样全屏使用。<br>
+        · 支持 M3U / JSON 播放列表、m3u8 与 mp4 直链；不支持 udp/rtp 组播源和需要授权的源。<br>
+        · 浏览器有跨域(CORS)限制：个别源在浏览器里无法直接播放属正常现象，可重试或换源。<br>
+        · TVBox 配置里需要爬虫的点播接口无法在网页使用；配置中的直播列表（lives）可导入。
+      </p>
+    </div>
+  </section>
+</main>
+
+<nav id="tabbar">
+  <button class="tab active" data-tab="ch"><span class="ti">📺</span>频道</button>
+  <button class="tab" data-tab="fav"><span class="ti">⭐</span>收藏</button>
+  <button class="tab" data-tab="hist"><span class="ti">🕘</span>历史</button>
+  <button class="tab" data-tab="set"><span class="ti">⚙️</span>设置</button>
+</nav>
+
+<!-- 播放器全屏层 -->
+<div id="player" hidden>
+  <div class="pbar">
+    <button id="backBtn" class="pbtn">‹ 返回</button>
+    <div id="playerTitle" class="ptitle"></div>
+    <button id="favBtn" class="pbtn">☆</button>
+  </div>
+  <div class="vwrap">
+    <video id="video" playsinline webkit-playsinline controls preload="none"></video>
+  </div>
+  <div id="status" class="status" hidden></div>
+  <div class="pactions">
+    <button id="retryBtn" class="abtn">重试</button>
+    <button id="nextBtn" class="abtn">换一个</button>
+    <button id="fsBtn" class="abtn">全屏</button>
+  </div>
+  <div id="related">
+    <div class="sec-title">相关频道</div>
+    <div id="relList"></div>
+  </div>
+</div>
+
+<div id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ================= 内置免费频道（官方公开流，失效可换台） ================= */
+var BUILTIN_CHANNELS = [
+  { name:'Al Jazeera English',  group:'新闻', url:'https://live-hls-web-aje.getaj.net/AJE/index.m3u8' },
+  { name:'Al Jazeera العربية',  group:'新闻', url:'https://live-hls-web-aja.getaj.net/AJA/index.m3u8' },
+  { name:'DW English',          group:'新闻', url:'https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8' },
+  { name:'DW Deutsch',          group:'新闻', url:'https://dwamdstream101.akamaized.net/hls/live/2015524/dwstream101/index.m3u8' },
+  { name:'France 24 English',   group:'新闻', url:'https://static.france24.com/live/F24_EN_LO_HLS/live_web.m3u8' },
+  { name:'France 24 Français',  group:'新闻', url:'https://static.france24.com/live/F24_FR_LO_HLS/live_tv.m3u8' },
+  { name:'ABC News (US)',       group:'新闻', url:'https://content.uplynk.com/channel/3324f2467c414329b3b0cc5cd987b6be.m3u8' },
+  { name:'CBS News',            group:'新闻', url:'https://cbsn-us.cbsnstream.cbsnews.com/out/v1/55a8648e8f134e82a470f83d562deeca/master.m3u8' },
+  { name:'NHK World Japan',     group:'新闻', url:'https://nhkwlive-ojp.akamaized.net/hls/live/2003459/nhkwlive-ojp-en/index.m3u8' },
+  { name:'Red Bull TV',         group:'体育', url:'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8' },
+  { name:'NASA TV Public',      group:'科教', url:'https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8' }
+];
+
+var IPTV_CATS = [
+  ['新闻','news'],['电影','movies'],['剧集','series'],['音乐','music'],
+  ['少儿','kids'],['纪录片','documentary'],['体育','sports'],['娱乐','entertainment']
+];
+
+var IPTV_BASE = 'https://iptv-org.github.io/iptv/categories/';
+
+/* ================= 存储与状态 ================= */
+function store(k, d){
+  try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; }
+}
+function save(k, v){
+  try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){ toast('本地存储空间不足，缓存未保存'); }
+}
+
+var sources = store('wtv_sources', null);
+if(!sources || !sources.length){
+  sources = [{ id:'builtin', name:'内置精选', kind:'builtin', value:'' }];
+}
+var cache = store('wtv_cache', {});   // sid -> { ts, channels }
+var favs  = store('wtv_favs', []);    // url 列表
+var hist  = store('wtv_hist', []);    // {name,url,group,ts}
+
+var allChannels = [];
+var activeTab = 'ch';
+var current = null;       // 当前播放频道
+var hls = null;
+var watchdog = 0;
+var lastUrl = '';
+var collapsed = {};
+var $ = function(s){ return document.querySelector(s); };
+
+/* ================= 工具 ================= */
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function attr(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+var toastTimer = 0;
+function toast(msg){
+  var t = $('#toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.hidden = true; }, 2600);
+}
+function looksLikeJSON(text){
+  var s = (text||'').replace(/^\uFEFF/, '').trim();
+  return s.charAt(0) === '{' || s.charAt(0) === '[';
+}
+function fetchTextSmart(url){
+  return fetch(url).then(function(res){
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return res.arrayBuffer();
+  }).then(function(buf){
+    var text = new TextDecoder('utf-8', {fatal:false}).decode(buf);
+    if(text.indexOf('\uFFFD') >= 0){
+      try{ text = new TextDecoder('gbk').decode(buf); }catch(e){}
+    }
+    return text;
+  });
+}
+
+/* ================= 播放列表解析 ================= */
+function parseM3U(text){
+  var out = [], cur = null;
+  var lines = text.split(/\r?\n/);
+  for(var i=0; i<lines.length; i++){
+    var line = lines[i].trim();
+    if(!line) continue;
+    if(line.indexOf('#EXTINF') === 0){
+      // 名称在最后一个引号之后的逗号后（属性值如 user-agent 可能含逗号）
+      var q = line.lastIndexOf('"');
+      var comma = q >= 0 ? line.indexOf(',', q) : line.indexOf(',');
+      if(comma < 0) comma = line.indexOf(',');
+      var head = comma >= 0 ? line.slice(0, comma) : line;
+      var title = comma >= 0 ? line.slice(comma+1).trim() : '';
+      var attrs = {};
+      var re = /([\w-]+)="([^"]*)"/g, m;
+      while((m = re.exec(head))) attrs[m[1].toLowerCase()] = m[2];
+      cur = {
+        name: attrs['tvg-name'] || title || '未命名',
+        group: attrs['group-title'] || '未分组',
+        logo: attrs['tvg-logo'] || ''
+      };
+    } else if(line.charAt(0) === '#'){
+      continue;
+    } else if(cur){
+      cur.url = line;
+      out.push(cur);
+      cur = null;
+    }
+  }
+  return out;
+}
+function parsePlaylistJSON(text){
+  var data = JSON.parse(text);
+  var arr = [];
+  if(Array.isArray(data)){
+    arr = data;
+  } else if(data && Array.isArray(data.lives)){
+    // TVBox 配置的直播部分：{ lives:[{ group, channels:[{ name, urls:[...] }] }] }
+    data.lives.forEach(function(l){
+      (l.channels||[]).forEach(function(c){
+        (c.urls||[]).forEach(function(u){
+          arr.push({ name:c.name, group:l.group||l.name||'直播', url:u });
+        });
+      });
+    });
+    return arr;
+  } else if(data && Array.isArray(data.channels)){
+    arr = data.channels;
+  } else {
+    throw new Error('JSON 格式无法识别');
+  }
+  return arr.map(function(c){
+    return { name:c.name||c.title, url:c.url||c.src, group:c.group||c.category||'未分组', logo:c.logo||'' };
+  }).filter(function(c){ return c.url; });
+}
+
+/* ================= 源加载 ================= */
+function fetchArchive(query){
+  var q = 'mediatype:(movies) AND collection:(feature_films)';
+  if(query) q = '(' + query + ') AND ' + q;
+  var url = 'https://archive.org/advancedsearch.php?q=' + encodeURIComponent(q) +
+    '&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=year&rows=100&page=1&output=json&sort%5B%5D=downloads+desc';
+  return fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(j){
+    return (j.response && j.response.docs || []).map(function(d){
+      return {
+        name: (d.title || d.identifier) + (d.year ? ' (' + d.year + ')' : ''),
+        group: '公版电影',
+        url: 'archive:' + d.identifier
+      };
+    });
+  });
+}
+function ensureChannels(src){
+  var cached = cache[src.id];
+  if(cached && cached.channels && Date.now() - cached.ts < 86400e3){
+    return Promise.resolve(cached.channels);
+  }
+  var p;
+  if(src.kind === 'builtin'){
+    p = Promise.resolve(BUILTIN_CHANNELS.slice());
+  } else if(src.kind === 'archive'){
+    p = fetchArchive('');
+  } else if(src.kind === 'url'){
+    p = fetchTextSmart(src.value).then(function(text){
+      if(/^\s*</.test(text)) throw new Error('返回的不是播放列表');
+      return looksLikeJSON(text) ? parsePlaylistJSON(text) : parseM3U(text);
+    });
+  } else { // text
+    try{
+      p = Promise.resolve(looksLikeJSON(src.value) ? parsePlaylistJSON(src.value) : parseM3U(src.value));
+    }catch(e){ p = Promise.reject(e); }
+  }
+  return p.then(function(chans){
+    chans = (chans||[]).filter(function(c){ return c && c.url; }).slice(0, 3000);
+    chans.forEach(function(c, i){ c.sid = src.id; c.id = src.id + '::' + i; });
+    cache[src.id] = { ts: Date.now(), channels: chans };
+    save('wtv_cache', cache);
+    return chans;
+  });
+}
+function ensureAll(){
+  $('#chLoading').hidden = false;
+  allChannels = [];
+  var jobs = sources.map(function(s){
+    return ensureChannels(s).then(function(ch){
+      allChannels = allChannels.concat(ch);
+    }).catch(function(e){
+      toast('「' + s.name + '」加载失败：' + (e.message||'网络错误'));
+    });
+  });
+  return Promise.all(jobs).then(function(){
+    $('#chLoading').hidden = true;
+    renderCurrent();
+  });
+}
+
+/* ================= 渲染 ================= */
+function rowHTML(c, sub){
+  var fav = favs.indexOf(c.url) >= 0;
+  var logo = c.logo ? '<img class="logo" src="' + attr(c.logo) + '" onerror="this.remove()" alt="">' : '';
+  return '<div class="row" data-url="' + attr(c.url) + '" data-name="' + attr(c.name) + '" data-group="' + attr(c.group||'') + '">' +
+    logo +
+    '<div class="grow"><div class="rname">' + esc(c.name) + '</div>' +
+    '<div class="rsub">' + esc(sub || c.group || '') + '</div></div>' +
+    '<button class="star' + (fav ? ' on' : '') + '" data-star="' + attr(c.url) + '">' + (fav ? '★' : '☆') + '</button>' +
+    '</div>';
+}
+function findChannelsByUrl(url){
+  var list = allChannels.filter(function(c){ return c.url === url; });
+  return list.length ? list : [{ name:'', url:url, group:'' }];
+}
+function renderChannels(){
+  var kw = ($('#search').value||'').trim().toLowerCase();
+  var list = allChannels;
+  if(kw){
+    list = allChannels.filter(function(c){
+      return (c.name||'').toLowerCase().indexOf(kw) >= 0 || (c.group||'').toLowerCase().indexOf(kw) >= 0;
+    });
+  }
+  var el = $('#chList');
+  if(!list.length){
+    el.innerHTML = '<div class="empty">' + (allChannels.length ? '没有匹配的频道' : '暂无频道，去「设置」添加播放列表吧') + '</div>';
+    return;
+  }
+  var map = {}, order = [];
+  list.forEach(function(c){
+    var g = c.group || '未分组';
+    if(!map[g]){ map[g] = []; order.push(g); }
+    map[g].push(c);
+  });
+  var html = '';
+  order.forEach(function(g){
+    var open = kw ? true : !collapsed[g];
+    html += '<div class="group-h" data-g="' + attr(g) + '"><span>' + esc(g) + '</span><span class="cnt">' +
+      map[g].length + ' 个' + (open ? ' ▲' : ' ▼') + '</span></div>';
+    if(open){
+      map[g].forEach(function(c){ html += rowHTML(c); });
+    }
+  });
+  el.innerHTML = html;
+}
+function renderFavs(){
+  var el = $('#favList');
+  var list = allChannels.filter(function(c){ return favs.indexOf(c.url) >= 0; });
+  // 收藏的源可能已下线，也把历史里的直链展示出来
+  var extra = favs.filter(function(u){
+    return !list.some(function(c){ return c.url === u; });
+  }).map(function(u){ return { name:'(已下线) ' + u.slice(0,40), url:u, group:'' }; });
+  var all = list.concat(extra);
+  el.innerHTML = all.length ? all.map(function(c){ return rowHTML(c); }).join('') :
+    '<div class="empty">还没有收藏，点频道右侧的 ☆ 收藏</div>';
+}
+function fmtTime(ts){
+  var d = new Date(ts), now = Date.now(), diff = now - ts;
+  if(diff < 60e3) return '刚刚';
+  if(diff < 3600e3) return Math.floor(diff/60e3) + ' 分钟前';
+  if(diff < 86400e3) return Math.floor(diff/3600e3) + ' 小时前';
+  return (d.getMonth()+1) + '-' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function renderHist(){
+  var el = $('#histList');
+  el.innerHTML = hist.length ? hist.map(function(h){
+    return rowHTML({ name:h.name, url:h.url, group:h.group, logo:'' }, fmtTime(h.ts));
+  }).join('') : '<div class="empty">还没有观看记录</div>';
+}
+function renderSources(){
+  var el = $('#srcList');
+  $('#srcCount').textContent = sources.length;
+  el.innerHTML = sources.map(function(s){
+    var kindName = { builtin:'内置', archive:'公版电影', url:'订阅', text:'粘贴' }[s.kind] || s.kind;
+    return '<div class="srcrow"><div class="grow"><div class="rname">' + esc(s.name) + '</div>' +
+      '<div class="rsub">' + esc(kindName) + '</div></div>' +
+      (s.kind === 'builtin' ? '' : '<button class="del" data-del="' + attr(s.id) + '">删除</button>') +
+      '</div>';
+  }).join('');
+}
+function renderCurrent(){
+  if(activeTab === 'ch') renderChannels();
+  else if(activeTab === 'fav') renderFavs();
+  else if(activeTab === 'hist') renderHist();
+  else renderSources();
+}
+
+/* ================= 播放 ================= */
+function setStatus(msg, isErr){
+  var s = $('#status');
+  s.textContent = msg;
+  s.hidden = !msg;
+  s.className = 'status' + (isErr ? ' err' : '');
+}
+function hlsErr(data){
+  if(data && data.type === 'networkError') return '网络加载失败：源可能已失效，或服务器不允许网页直接跨域播放（CORS）';
+  if(data && data.type === 'mediaError') return '解码失败：该流格式浏览器不支持';
+  return '播放出错：' + ((data && data.details) || '');
+}
+function startPlay(url){
+  var v = $('#video');
+  lastUrl = url;
+  clearTimeout(watchdog);
+  if(hls){ try{ hls.destroy(); }catch(e){} hls = null; }
+  v.onerror = null;
+  v.removeAttribute('src');
+  try{ v.load(); }catch(e){}
+  var isHls = /\.m3u8(\?|#|$)/i.test(url) || /[?&](type|fmt)=m3u8/i.test(url);
+  var nativeHls = isHls && v.canPlayType('application/vnd.apple.mpegurl');
+  if(nativeHls){
+    // iPhone Safari 原生 HLS，无需 hls.js，无跨域限制
+    v.src = url;
+    v.play().catch(function(){});
+  } else if(isHls && window.Hls && Hls.isSupported()){
+    hls = new Hls({ manifestLoadingTimeOut:12000, manifestLoadingMaxRetry:2, fragLoadingMaxRetry:4 });
+    hls.on(Hls.Events.MANIFEST_PARSED, function(){
+      setStatus('');
+      v.play().catch(function(){});
+    });
+    hls.on(Hls.Events.ERROR, function(ev, data){
+      if(data && data.fatal){
+        setStatus(hlsErr(data), true);
+        if(hls){ try{ hls.destroy(); }catch(e){} hls = null; }
+      }
+    });
+    hls.loadSource(url);
+    hls.attachMedia(v);
+  } else {
+    v.src = url;
+    v.play().catch(function(){});
+  }
+  setStatus('连接中…');
+  v.onerror = function(){
+    setStatus('无法播放：该源可能已失效、有地区限制或不允许网页直接播放', true);
+  };
+  v.onplaying = function(){ setStatus('已连接'); setTimeout(function(){ if($('#status').textContent==='已连接') setStatus(''); }, 1500); };
+  watchdog = setTimeout(function(){
+    if(v.readyState < 3 && !v.error){
+      setStatus('连接超时：该源可能已失效、地区限制或不允许网页直接播放，试试「换一个」', true);
+    }
+  }, 12000);
+}
+function resolveArchive(id){
+  return fetch('https://archive.org/metadata/' + encodeURIComponent(id)).then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(j){
+    var files = (j.files||[]).filter(function(f){
+      return f.name && /\.(mp4|m4v|webm|ogv|mov)$/i.test(f.name) && parseInt(f.size||'0',10) > 1000000;
+    });
+    files.sort(function(a,b){
+      var pa = /mp4/i.test(a.name) ? 1 : 0, pb = /mp4/i.test(b.name) ? 1 : 0;
+      return pb - pa;
+    });
+    if(!files.length) return '';
+    var name = files[0].name.split('/').map(encodeURIComponent).join('/');
+    return 'https://archive.org/download/' + encodeURIComponent(id) + '/' + name;
+  });
+}
+function renderRelated(ch){
+  var grp = ch.group || '';
+  var list = allChannels.filter(function(c){ return c.group === grp && c.url !== ch.url; }).slice(0, 20);
+  if(!list.length){
+    list = allChannels.filter(function(c){ return c.url !== ch.url; }).slice(0, 12);
+  }
+  $('#relList').innerHTML = list.length ? list.map(function(c){ return rowHTML(c); }).join('') :
+    '<div class="empty">没有其他频道</div>';
+}
+function updateFavBtn(){
+  var on = current && favs.indexOf(current.url) >= 0;
+  $('#favBtn').textContent = on ? '★' : '☆';
+  $('#favBtn').className = 'pbtn' + (on ? ' on' : '');
+}
+function playChannel(ch){
+  if(!ch || !ch.url) return;
+  current = ch;
+  $('#player').hidden = false;
+  $('#playerTitle').textContent = ch.name || '播放';
+  updateFavBtn();
+  renderRelated(ch);
+  addHistory(ch);
+  var url = ch.url;
+  if(url.indexOf('archive:') === 0){
+    setStatus('正在解析影片文件…');
+    resolveArchive(url.slice(8)).then(function(real){
+      if(!real){ setStatus('未找到可在线播放的视频文件', true); return; }
+      startPlay(real);
+    }).catch(function(e){
+      setStatus('解析失败：' + (e.message||'网络错误'), true);
+    });
+  } else {
+    startPlay(url);
+  }
+}
+function closePlayer(){
+  $('#player').hidden = true;
+  clearTimeout(watchdog);
+  if(hls){ try{ hls.destroy(); }catch(e){} hls = null; }
+  var v = $('#video');
+  v.pause();
+  v.removeAttribute('src');
+  try{ v.load(); }catch(e){}
+  current = null;
+}
+function addHistory(ch){
+  if(!ch.url) return;
+  hist = hist.filter(function(h){ return h.url !== ch.url; });
+  hist.unshift({ name:ch.name||'播放', url:ch.url, group:ch.group||'', ts:Date.now() });
+  if(hist.length > 100) hist.length = 100;
+  save('wtv_hist', hist);
+}
+function toggleFav(url){
+  var i = favs.indexOf(url);
+  if(i >= 0) favs.splice(i, 1); else favs.push(url);
+  save('wtv_favs', favs);
+  updateFavBtn();
+  renderCurrent();
+}
+
+/* ================= 事件绑定 ================= */
+// 列表点击（委托）
+function listClickHandler(e){
+  var star = e.target.closest('.star');
+  if(star && star.dataset.star){
+    toggleFav(star.dataset.star);
+    e.stopPropagation();
+    return;
+  }
+  var row = e.target.closest('.row');
+  if(row && row.dataset.url){
+    playChannel({ name:row.dataset.name, url:row.dataset.url, group:row.dataset.group||'' });
+  }
+}
+['#chList','#favList','#histList','#relList'].forEach(function(sel){
+  $(sel).addEventListener('click', listClickHandler);
+});
+// 分组折叠
+$('#chList').addEventListener('click', function(e){
+  var h = e.target.closest('.group-h');
+  if(h && h.dataset.g){
+    var g = h.dataset.g;
+    collapsed[g] = !collapsed[g];
+    renderChannels();
+  }
+});
+
+// Tab 切换
+document.querySelectorAll('.tab').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    activeTab = btn.dataset.tab;
+    document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b === btn); });
+    document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+    $('#view-' + ({ch:'ch',fav:'fav',hist:'hist',set:'set'}[activeTab])).classList.add('active');
+    renderCurrent();
+    window.scrollTo(0,0);
+  });
+});
+
+// 搜索
+$('#search').addEventListener('input', renderChannels);
+
+// 播放器操作
+$('#backBtn').addEventListener('click', closePlayer);
+$('#retryBtn').addEventListener('click', function(){
+  if(current){
+    var url = current.url;
+    if(url.indexOf('archive:') === 0){ playChannel(current); }
+    else if(lastUrl){ startPlay(lastUrl); }
+    else playChannel(current);
+  }
+});
+$('#nextBtn').addEventListener('click', function(){
+  if(!current) return;
+  var same = allChannels.filter(function(c){ return c.group && c.group === current.group && c.url !== current.url; });
+  var pool = same.length ? same : allChannels.filter(function(c){ return c.url !== current.url; });
+  if(pool.length) playChannel(pool[Math.floor(Math.random() * pool.length)]);
+  else toast('没有其他可切换的频道');
+});
+$('#fsBtn').addEventListener('click', function(){
+  var v = $('#video');
+  if(v.webkitEnterFullscreen) v.webkitEnterFullscreen();          // iPhone Safari
+  else if(v.requestFullscreen) v.requestFullscreen();
+});
+$('#favBtn').addEventListener('click', function(){
+  if(current) toggleFav(current.url);
+});
+
+// 添加订阅
+$('#addSubBtn').addEventListener('click', function(){
+  var url = $('#subUrl').value.trim();
+  if(!url){ toast('请输入播放列表地址'); return; }
+  addSource({ name:$('#subName').value.trim() || '订阅源', kind:'url', value:url });
+  $('#subName').value = ''; $('#subUrl').value = '';
+});
+// 粘贴导入
+$('#addPasteBtn').addEventListener('click', function(){
+  var text = $('#pasteBox').value.trim();
+  if(!text){ toast('请先粘贴内容'); return; }
+  addSource({ name:'粘贴列表 ' + new Date().toLocaleDateString(), kind:'text', value:text });
+  $('#pasteBox').value = '';
+});
+// 公版电影库
+$('#addArchiveBtn').addEventListener('click', function(){
+  var exist = sources.find(function(s){ return s.kind === 'archive'; });
+  if(exist){
+    delete cache[exist.id]; save('wtv_cache', cache);
+    toast('已刷新公版电影库');
+    ensureAll();
+    return;
+  }
+  addSource({ name:'公版电影库', kind:'archive', value:'' });
+});
+// 直链播放
+$('#directBtn').addEventListener('click', function(){
+  var url = $('#directUrl').value.trim();
+  if(!url){ toast('请输入视频直链'); return; }
+  playChannel({ name:'直链播放', url:url, group:'' });
+});
+// 删除源
+$('#srcList').addEventListener('click', function(e){
+  var del = e.target.closest('.del');
+  if(del && del.dataset.del){
+    var id = del.dataset.del;
+    sources = sources.filter(function(s){ return s.id !== id; });
+    delete cache[id];
+    save('wtv_sources', sources); save('wtv_cache', cache);
+    renderSources();
+    ensureAll();
+  }
+});
+// 清空数据
+$('#clearBtn').addEventListener('click', function(){
+  favs = []; hist = [];
+  save('wtv_favs', favs); save('wtv_hist', hist);
+  renderCurrent();
+  toast('已清空');
+});
+
+function addSource(opt){
+  if(opt.kind === 'url'){
+    var dup = sources.find(function(s){ return s.value === opt.value; });
+    if(dup){ toast('该订阅已存在'); return; }
+  }
+  sources.push({
+    id: 's' + Date.now() + Math.floor(Math.random()*1000),
+    name: opt.name, kind: opt.kind, value: opt.value
+  });
+  save('wtv_sources', sources);
+  renderSources();
+  ensureAll();
+  toast('已添加：' + opt.name);
+}
+
+// 一键 iptv-org 分类
+(function(){
+  var box = $('#iptvChips');
+  IPTV_CATS.forEach(function(cat){
+    var b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = cat[0];
+    b.addEventListener('click', function(){
+      addSource({ name:'iptv-org · ' + cat[0], kind:'url', value: IPTV_BASE + cat[1] + '.m3u' });
+    });
+    box.appendChild(b);
+  });
+})();
+
+/* ================= 启动 ================= */
+save('wtv_sources', sources);
+ensureAll();
+})();
+</script>
+</body>
+</html>
