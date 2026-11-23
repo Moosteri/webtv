@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="影视台">
-<title>影视台 · 追番 · 电视 · 公版电影</title>
+<title>影视台 · 追番 · 点播 · 电视</title>
 <style>
   :root{
     --text:#eef2f8; --dim:#9aa7b8; --acc:#5aa2ff; --danger:#ff6b5e; --gold:#ffd166;
@@ -121,6 +121,18 @@
   .lcard img{ width:100%; aspect-ratio:3/4; object-fit:cover; display:block; background:#1a2434; }
   .lcard .noimg{ width:100%; aspect-ratio:3/4; display:flex; align-items:center; justify-content:center; color:#5b6a80; font-size:12px; background:rgba(255,255,255,.05); }
   .lcard .bname{ color:var(--text); }
+  .lcard .noimg{ position:relative; }
+  .lcard .noimg .cover{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+
+  /* 点播：我的片库 */
+  .vodthumb{ width:52px; height:68px; border-radius:9px; flex:none; overflow:hidden; position:relative;
+    background:#1a2434; display:flex; align-items:center; justify-content:center; color:#5b6a80; font-size:18px; }
+  .vodthumb img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .vodrow{ display:flex; align-items:center; gap:10px; padding:10px 3px; border-bottom:1px solid rgba(255,255,255,.07); }
+  .vodrow .grow{ flex:1; min-width:0; }
+  .vodrow .rname{ font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .vodrow .rsub{ font-size:12px; color:var(--dim); margin-top:3px; }
+  .vodrow .del{ padding:6px 10px; font-size:12px; }
 
   /* 按钮 */
   .btn{ display:inline-block; width:100%; margin-top:8px; padding:12px 14px; font-size:15px;
@@ -214,7 +226,7 @@
 <header class="appbar">
   <div class="dot">▶</div>
   <h1>影视台</h1>
-  <span class="tag">追番 · 电视 · 电影</span>
+  <span class="tag">追番 · 点播 · 电视</span>
 </header>
 
 <main>
@@ -260,8 +272,34 @@
     <div id="chList"></div>
   </section>
 
-  <!-- 片库 -->
+  <!-- 片库 / 点播 -->
   <section id="view-lib" class="view">
+    <div class="card glass">
+      <div class="sec-title">我的点播库（本地保存，不上传）</div>
+      <input id="vodTitle" type="text" placeholder="片名，例如：旅行记录 第 1 集">
+      <input id="vodUrl" type="text" placeholder="播放地址：mp4 / m3u8 直链，或 B 站链接 / BV 号">
+      <input id="vodCover" type="url" placeholder="封面图地址（可选）">
+      <button id="vodAddBtn" class="btn primary">加入点播库</button>
+      <p class="hint">支持你自己的视频直链、公开可播的 mp4/m3u8，以及 B 站官方播放链接。数据只存在本机浏览器，清空浏览器数据会丢失。</p>
+      <div id="vodList"></div>
+    </div>
+
+    <div class="card glass">
+      <div class="sec-title">B 站在线点播</div>
+      <input id="vodBiliInput" type="text" placeholder="粘贴 B 站视频链接或 BV 号">
+      <button id="vodBiliBtn" class="btn">▶ 立即播放</button>
+      <p class="hint">使用 B 站官方内嵌播放器；免费集数可直接看，会员集需 B 站会员。</p>
+    </div>
+
+    <div class="sec-title">最近更新 · 公版点播 <button id="vodNewRefresh" class="btn mini">换一批</button></div>
+    <div id="vodNewLoading" class="loading" hidden>正在加载最近更新…</div>
+    <div id="vodNewGrid" class="libgrid"></div>
+
+    <div class="sec-title">搜索公版片库（可直接播放）</div>
+    <input id="vodSearchInput" type="search" placeholder="输入片名，例如：Charlie Chaplin" style="margin-bottom:10px;">
+    <div id="vodSearchGrid" class="libgrid"></div>
+    <div id="vodSearchEmpty"></div>
+
     <div class="sec-title">公版动画 · 版权过期 · 可直接播放 <span id="cartoonCnt" style="font-weight:400;"></span></div>
     <input id="libSearch1" type="search" placeholder="搜索老动画名称" style="margin-bottom:10px;">
     <div id="libLoading1" class="loading" hidden>正在加载公版动画…</div>
@@ -331,7 +369,7 @@
         · 番剧在线看：追番页顶部粘贴 B 站视频链接或 BV 号，用 B 站官方播放器在本页看（免费集直接播，会员集需 B 站会员）。<br>
         · 搜索：输入片名可一次搜「全部订阅源的直播频道 + 公版片库（可直按播放）+ 番剧资料」。<br>
         · 订阅切换：电视页顶部是订阅源胶囊，点一个就只看那个源，点「全部源」合并显示；设置里可停用/删除订阅。<br>
-        · 片库：公版动画和电影，点击直接在线播放，完全免费合法。<br>
+        · 点播页：「我的点播库」可添加自己的 mp4/m3u8/B 站链接，只存本机；「最近更新」是 archive.org 公版片库按上线时间排序；「搜索公版片库」可直接搜片并播放，完全免费合法。<br>
         · iPhone 上：Safari 打开 →「分享」→「添加到主屏幕」，像 App 一样全屏使用。<br>
         · 支持 m3u8 与 mp4 直链播放；不支持 udp/rtp 组播源。<br>
         · 个别源在浏览器里播不了（需要特定 UA/Referer、IPv6 源或已失效），用「换一个」换台，或点「复制地址」粘到 VLC 等播放器试。
@@ -344,7 +382,7 @@
   <button class="tab active" data-tab="bgm"><span class="ti">🔥</span>追番</button>
   <button class="tab" data-tab="search"><span class="ti">🔍</span>搜索</button>
   <button class="tab" data-tab="tv"><span class="ti">📺</span>电视</button>
-  <button class="tab" data-tab="lib"><span class="ti">🎬</span>片库</button>
+  <button class="tab" data-tab="lib"><span class="ti">🎬</span>点播</button>
   <button class="tab" data-tab="mine"><span class="ti">⭐</span>我的</button>
   <button class="tab" data-tab="set"><span class="ti">⚙️</span>设置</button>
 </nav>
@@ -441,6 +479,9 @@ var bgmLoaded = false;
 var libLoaded = false;
 var bgmIndex = {};   // 番剧 id -> item
 var libData = { cartoons: null, films: null }; // 内存缓存
+var vodItems = store('wtv_vod', []);           // 我的点播库 [{id,title,url,cover,ts}]
+var vodPage = 0;                               // 最近更新分页
+var vodLoaded = false;
 var $ = function(s){ return document.querySelector(s); };
 
 /* ================= 工具 ================= */
@@ -821,9 +862,12 @@ function fetchLib(col, force){
   });
 }
 function libCardHTML(it){
+  var cover = 'https://archive.org/services/img/' + encodeURIComponent(it.id);
+  var badge = it.badge || it.year || '';
   return '<div class="lcard" data-aid="' + attr(it.id) + '" data-atitle="' + attr(it.title) + '">' +
-    '<div class="noimg">🎞️<br>点击播放</div>' +
-    (it.year ? '<div class="yr">' + esc(it.year) + '</div>' : '') +
+    '<div class="noimg">🎞️<br>点击播放<img class="cover" loading="lazy" src="' + attr(cover) +
+      '" alt="" onerror="this.remove()"></div>' +
+    (badge ? '<div class="yr">' + esc(badge) + '</div>' : '') +
     '<div class="bname">' + esc(it.title) + '</div>' +
     '</div>';
 }
@@ -862,6 +906,102 @@ function ensureLib(force){
     $('#filmEmpty').innerHTML = '';
     var r = $('#libRetry');
     if(r) r.addEventListener('click', function(){ ensureLib(true); });
+  });
+}
+
+/* ================= 点播：我的片库 / 最近更新 ================= */
+function vodKindLabel(u){
+  if((u||'').indexOf('bili:') === 0) return 'B 站点播';
+  if((u||'').indexOf('archive:') === 0) return 'archive.org';
+  return '视频直链';
+}
+function renderVodList(){
+  var el = $('#vodList');
+  if(!el) return;
+  if(!vodItems.length){
+    el.innerHTML = '<div class="empty">还没有添加点播内容。上面填入片名和地址即可加入。</div>';
+    return;
+  }
+  el.innerHTML = vodItems.map(function(it){
+    var thumb = '<div class="vodthumb">' +
+      (it.cover ? '<img src="' + attr(it.cover) + '" alt="" loading="lazy" onerror="this.remove()">' : '▶') + '</div>';
+    return '<div class="vodrow">' + thumb +
+      '<div class="grow"><div class="rname">' + esc(it.title) + '</div>' +
+      '<div class="rsub">' + esc(vodKindLabel(it.url)) + ' · ' + fmtTime(it.ts) + '</div></div>' +
+      '<button class="del" data-vodplay="' + attr(it.id) + '">播放</button>' +
+      '<button class="del" data-voddel="' + attr(it.id) + '">删除</button>' +
+      '</div>';
+  }).join('');
+}
+function normalizeVodUrl(raw){
+  var s = (raw||'').trim();
+  var bv = parseBiliInput(s);
+  if(bv) return 'bili:' + bv;
+  if(/^https?:\/\//i.test(s)) return s;
+  return '';
+}
+function addVodItem(){
+  var title = ($('#vodTitle').value||'').trim();
+  var url = normalizeVodUrl($('#vodUrl').value);
+  var cover = ($('#vodCover').value||'').trim();
+  if(!title){ toast('请先填写片名'); return; }
+  if(!url){ toast('播放地址无效：支持 mp4/m3u8 直链、B 站链接或 BV 号'); return; }
+  if(cover && !/^https?:\/\//i.test(cover)){ toast('封面地址需要以 http(s) 开头'); return; }
+  vodItems.unshift({ id:'v' + Date.now() + Math.floor(Math.random()*1000), title:title, url:url, cover:cover, ts:Date.now() });
+  if(vodItems.length > 300) vodItems.length = 300;
+  save('wtv_vod', vodItems);
+  $('#vodTitle').value = ''; $('#vodUrl').value = ''; $('#vodCover').value = '';
+  renderVodList();
+  toast('已加入点播库：' + title);
+}
+function fetchArchiveRecent(force){
+  var c = store('wtv_vod_new_cache', null);
+  if(!force && c && c.items && c.page === vodPage && Date.now() - c.ts < 3600e3){
+    return Promise.resolve(c.items);
+  }
+  var q = '(mediatype:(movies)) AND (collection:(feature_films) OR collection:(animationandcartoons))';
+  var url = 'https://archive.org/advancedsearch.php?q=' + encodeURIComponent(q) +
+    '&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=year&fl%5B%5D=publicdate' +
+    '&rows=24&page=' + (vodPage + 1) + '&output=json&sort%5B%5D=' + encodeURIComponent('publicdate desc');
+  return fetchT(url, null, 15000).then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(j){
+    var items = ((j.response && j.response.docs) || []).map(function(d){
+      var pd = d.publicdate || '';
+      return { id:d.identifier, title:d.title || d.identifier, year:d.year || '',
+        badge: pd.length >= 10 ? pd.slice(5, 10).replace('-', '/') : '' };
+    });
+    save('wtv_vod_new_cache', { ts:Date.now(), page:vodPage, items:items });
+    return items;
+  });
+}
+function renderVodRecent(force){
+  var grid = $('#vodNewGrid');
+  if(!grid) return;
+  $('#vodNewLoading').hidden = false;
+  fetchArchiveRecent(force).then(function(items){
+    $('#vodNewLoading').hidden = true;
+    grid.innerHTML = items.length ? items.map(libCardHTML).join('') :
+      '<div class="empty">暂时没有更新，点「换一批」重试</div>';
+  }).catch(function(e){
+    $('#vodNewLoading').hidden = true;
+    grid.innerHTML = '<div class="empty">加载失败：' + esc(e.message||'网络错误') +
+      '<br>（需要能访问 archive.org）<button class="btn mini" id="vodNewRetry" style="margin-top:10px;">重试</button></div>';
+    var r = $('#vodNewRetry');
+    if(r) r.addEventListener('click', function(){ renderVodRecent(true); });
+  });
+}
+function doVodSearch(){
+  var raw = ($('#vodSearchInput').value||'').trim();
+  if(!raw){ toast('请输入片名'); return; }
+  $('#vodSearchEmpty').innerHTML = '<div class="loading">正在搜索公版片库…</div>';
+  $('#vodSearchGrid').innerHTML = '';
+  searchArchive(raw).then(function(items){
+    $('#vodSearchEmpty').innerHTML = items.length ? '' : '<div class="empty">没有匹配的公版影片</div>';
+    $('#vodSearchGrid').innerHTML = items.map(libCardHTML).join('');
+  }).catch(function(e){
+    $('#vodSearchEmpty').innerHTML = '<div class="empty">搜索失败：' + esc(e.message||'网络错误') + '</div>';
   });
 }
 
@@ -1346,23 +1486,50 @@ $('#favChips').addEventListener('click', function(e){
   var x = e.target.closest('[data-unfav]');
   if(x) toggleBgmFav(x.dataset.unfav);
 });
-$('#cartoonGrid').addEventListener('click', function(e){
-  var card = e.target.closest('.lcard');
-  if(card && card.dataset.aid){
-    playChannel({ name:card.dataset.atitle || card.dataset.aid, url:'archive:' + card.dataset.aid, group:'公版动画' });
-  }
-});
-$('#filmGrid').addEventListener('click', function(e){
-  var card = e.target.closest('.lcard');
-  if(card && card.dataset.aid){
-    playChannel({ name:card.dataset.atitle || card.dataset.aid, url:'archive:' + card.dataset.aid, group:'公版电影' });
-  }
+['#cartoonGrid','#filmGrid','#vodNewGrid','#vodSearchGrid'].forEach(function(sel){
+  $(sel).addEventListener('click', function(e){
+    var card = e.target.closest('.lcard');
+    if(card && card.dataset.aid){
+      playChannel({ name:card.dataset.atitle || card.dataset.aid, url:'archive:' + card.dataset.aid, group:'公版点播' });
+    }
+  });
 });
 $('#libSearch1').addEventListener('input', function(){
   renderLibSection('cartoons', '#cartoonGrid', '#cartoonCnt', '#cartoonEmpty', $('#libSearch1').value.trim());
 });
 $('#libSearch2').addEventListener('input', function(){
   renderLibSection('films', '#filmGrid', '#filmCnt', '#filmEmpty', $('#libSearch2').value.trim());
+});
+
+// 点播页
+$('#vodAddBtn').addEventListener('click', addVodItem);
+$('#vodUrl').addEventListener('keydown', function(e){ if(e.key === 'Enter') addVodItem(); });
+$('#vodBiliBtn').addEventListener('click', function(){
+  var bv = parseBiliInput($('#vodBiliInput').value);
+  if(!bv){ toast('请粘贴含 BV 号的 B 站链接，或直接输入 BV 号'); return; }
+  playBili(bv, 'B站 ' + bv);
+});
+$('#vodBiliInput').addEventListener('keydown', function(e){ if(e.key === 'Enter') $('#vodBiliBtn').click(); });
+$('#vodNewRefresh').addEventListener('click', function(){
+  vodPage = (vodPage + 1) % 12;
+  renderVodRecent(true);
+});
+$('#vodSearchInput').addEventListener('keydown', function(e){ if(e.key === 'Enter') doVodSearch(); });
+$('#vodList').addEventListener('click', function(e){
+  var play = e.target.closest('[data-vodplay]');
+  if(play){
+    var it = vodItems.find(function(x){ return x.id === play.dataset.vodplay; });
+    if(it) playChannel({ name:it.title, url:it.url, group:'我的点播' });
+    return;
+  }
+  var del = e.target.closest('[data-voddel]');
+  if(del){
+    var id = del.dataset.voddel;
+    vodItems = vodItems.filter(function(x){ return x.id !== id; });
+    save('wtv_vod', vodItems);
+    renderVodList();
+    toast('已从点播库移除');
+  }
 });
 
 // Tab 切换
@@ -1377,7 +1544,13 @@ document.querySelectorAll('.tab').forEach(function(btn){
     else if(activeTab === 'set') renderSources();
     else if(activeTab === 'search'){ setTimeout(function(){ $('#gsearch').focus(); }, 200); }
     else if(activeTab === 'bgm' && !bgmLoaded){ bgmLoaded = true; renderBangumi(false); }
-    else if(activeTab === 'lib' && !libLoaded){ libLoaded = true; ensureLib(false); }
+    else if(activeTab === 'lib' && !libLoaded){
+      libLoaded = true;
+      vodLoaded = true;
+      renderVodList();
+      renderVodRecent(false);
+      ensureLib(false);
+    }
     window.scrollTo(0, 0);
   });
 });
